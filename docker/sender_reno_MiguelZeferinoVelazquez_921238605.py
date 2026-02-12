@@ -6,7 +6,9 @@ SEQ_ID_SIZE = 4
 MESSAGE_SIZE = PACKET_SIZE - SEQ_ID_SIZE
 EXPECTED_SEQ_ID = 0
 WINDOW = {}
-WINDOW_SIZE = 100
+INITIAL_WINDOW_SIZE = 1
+WINDOW_SIZE = INITIAL_WINDOW_SIZE
+SLOW_START_THRESHOLD = 64
 
 fileToSend = open("file.mp3", "rb")
 
@@ -63,12 +65,22 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
                     delayTimeStarts = delayTimeStarts[numAck:]
                     if seq_id_int == lastAck:
                         repeatCounter +=1
+                        # Multiplicative Decrease  & Slow Start Threshold Adjustment
                         if repeatCounter == 3:
                             sendAll = True
-                            repeatCounter = 0
+                            WINDOW_SIZE //= 2
+                            SLOW_START_THRESHOLD = WINDOW_SIZE
+                        elif repeatCounter > 3:
+                            # Fast Recovery
+                            WINDOW_SIZE +=1
                     else:
                         lastAck = seq_id_int
                         repeatCounter = 0
+                        # Additive OR Slow Start Increase
+                        if WINDOW_SIZE < SLOW_START_THRESHOLD:
+                            WINDOW_SIZE *= 2
+                        else:
+                            WINDOW_SIZE += 1
                 if message == b'fin':
                     udp_socket.sendto(seq_id + b'==FINACK==', ("localhost",5001))
                     bytesCounter += len(seq_id + b'==FINACK==')
@@ -84,7 +96,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
 
 
         except socket.timeout:
-            sendAll = Tru
+            sendAll = True
+            repeatCounter = 0
+            # Window Size Reset
+            WINDOW_SIZE = INITIAL_WINDOW_SIZE
 
 fileToSend.close()
 

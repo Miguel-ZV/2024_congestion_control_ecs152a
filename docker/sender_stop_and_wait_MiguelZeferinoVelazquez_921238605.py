@@ -74,6 +74,6 @@ for i in delayTimes:
    sumDelays += i[1] - i[0]
 packetDelay = sumDelays/len(delayTimes)
 throughput = bytesCounter/(finThroughPut - startThroughPut)
-print("Throughput: " + str(throughput) + " bytes per second")
-print("Average Per-Packet Delay: " + str(packetDelay) + " seconds")
-print("Performance: " + str(0.3*(throughput/1000) + 0.7/packetDelay))
+print("%.7f," % throughput)
+print("%.7f," % packetDelay)
+print("%.7f" % (0.3*(throughput/1000) + 0.7/packetDelay))
