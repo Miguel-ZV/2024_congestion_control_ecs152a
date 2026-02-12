@@ -84,7 +84,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
 
 
         except socket.timeout:
-            sendAll = Tru
+            sendAll = True
 
 fileToSend.close()
 
