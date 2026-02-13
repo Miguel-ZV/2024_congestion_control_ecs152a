@@ -31,11 +31,11 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
     while True:
         try:
             # create packets and send
+            index = EXPECTED_SEQ_ID 
             for i in range(WINDOW_SIZE):
-                index = EXPECTED_SEQ_ID + i*MESSAGE_SIZE
-
                 if WINDOW.get(index) == None:
-                    WINDOW[index] =  int.to_bytes(index, SEQ_ID_SIZE, signed=True, byteorder='big') + fileToSend.read(MESSAGE_SIZE)
+                    payload = fileToSend.read(MESSAGE_SIZE)
+                    WINDOW[index] =  int.to_bytes(index, SEQ_ID_SIZE, signed=True, byteorder='big') + payload
                     packetCounter += 1
                     udp_socket.sendto(WINDOW[index],("localhost",5001))
                     delayTimeStarts.append(time.perf_counter())
@@ -43,6 +43,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
                 elif sendAll:
                     udp_socket.sendto(WINDOW[index],("localhost",5001))
                     bytesCounter += len(WINDOW[index])
+                if len(WINDOW[index]) == SEQ_ID_SIZE:
+                    break
+                index += len(WINDOW[index])-SEQ_ID_SIZE
 
             if sendAll:
                 sendAll = False
@@ -59,10 +62,12 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
             if seq_id_int >= EXPECTED_SEQ_ID:
                 if message == b'ack':
                     delayTimeEnd = time.perf_counter()
-                    numAck = (seq_id_int-EXPECTED_SEQ_ID)//MESSAGE_SIZE
+                    numAck = 0
+                    for k in WINDOW.keys():
+                        if k < seq_id_int:
+                            numAck += 1
                     for i in range(numAck):
-                        delayTimeSum += delayTimeEnd - delayTimeStarts[i]
-                    delayTimeStarts = delayTimeStarts[numAck:]
+                        delayTimeSum += delayTimeEnd - delayTimeStarts.pop(0)
                     if seq_id_int == lastAck:
                         repeatCounter +=1
                         # Multiplicative Decrease  & Slow Start Threshold Adjustment
